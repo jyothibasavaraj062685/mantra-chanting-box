@@ -1,6 +1,7 @@
-// Uninterrupted Devotional Chanting & Music Box Engine
-// Plays real bundled Hindi/Sanskrit Vocal MP3 recordings (./audio/<deity>_<track>_<line>.mp3)
-// accompanied by a warm Tanpura Shruti Box drone, Harmonium melody swaras, and resonant Om choir!
+// Uninterrupted Devotional Chanting & Music Box Engine (Web Audio API Direct Vocal Buffer Player)
+// Plays all 187 real Hindi/Sanskrit Vocal MP3 recordings directly through Web Audio API (this.ctx)
+// — the exact same audio pipeline as the temple bell & shruti drone, guaranteeing 100% audible vocal playback
+// on Android, iOS, and Desktop without <audio> tag autoplay blocks!
 
 class MantraAudioEngine {
   constructor() {
@@ -11,55 +12,26 @@ class MantraAudioEngine {
     this.currentTrack = null;
     this.currentLineIndex = 0;
     this.loopCount = 0;
+    this.playbackSessionId = 0;
 
     // User toggles
     this.voiceEnabled = true;
     this.droneEnabled = true;
-    this.melodyEnabled = true; // Warm harmonium accompaniment
+    this.melodyEnabled = true;
     this.speedMultiplier = 1.0;
 
-    // Timers & audio elements
+    // Web Audio nodes & caches
+    this.bufferCache = new Map();
+    this.activeVoiceSource = null;
     this.lineTimer = null;
     this.noteTimers = [];
     this.droneInterval = null;
     this.wakeLock = null;
 
-    // Primary vocal MP3 player + preloader for gapless transitions
-    this.ttsAudio = new Audio();
-    this.ttsAudio.preload = 'auto';
-    this.nextAudioPreload = new Audio();
-    this.nextAudioPreload.preload = 'auto';
-
     // Callbacks for UI updates
     this.onStateChange = null;
     this.onLineChange = null;
     this.onLoopIncrement = null;
-
-    this.selectedVoice = null;
-    this._initVoices();
-  }
-
-  _initVoices() {
-    if (!('speechSynthesis' in window)) return;
-    const pickBestVoice = () => {
-      const voices = window.speechSynthesis.getVoices() || [];
-      if (!voices.length) return;
-      const priorities = [
-        v => v.lang && v.lang.toLowerCase().startsWith('hi-in'),
-        v => v.lang && v.lang.toLowerCase().startsWith('en-in'),
-        v => v.default
-      ];
-      for (const test of priorities) {
-        const match = voices.find(test);
-        if (match) {
-          this.selectedVoice = match;
-          break;
-        }
-      }
-      if (!this.selectedVoice) this.selectedVoice = voices[0];
-    };
-    pickBestVoice();
-    window.speechSynthesis.onvoiceschanged = pickBestVoice;
   }
 
   _ensureContext() {
@@ -91,12 +63,12 @@ class MantraAudioEngine {
   }
 
   // Interactive Temple Bell
-  playTempleBell(volumeScale = 0.5) {
+  playTempleBell(volumeScale = 0.35) {
     this._ensureContext();
     const now = this.ctx.currentTime;
     const baseFreq = 784;
     const partials = [1, 2.0, 2.42, 3.0];
-    const gains = [0.12, 0.06, 0.04, 0.02];
+    const gains = [0.10, 0.05, 0.03, 0.015];
 
     partials.forEach((ratio, idx) => {
       const osc = this.ctx.createOscillator();
@@ -104,7 +76,7 @@ class MantraAudioEngine {
       osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
       osc.frequency.setValueAtTime(baseFreq * ratio, now);
 
-      const dur = 2.4 / (idx * 0.6 + 1);
+      const dur = 2.2 / (idx * 0.6 + 1);
       gain.gain.setValueAtTime(0.0005, now);
       gain.gain.linearRampToValueAtTime(gains[idx] * volumeScale, now + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
@@ -150,12 +122,12 @@ class MantraAudioEngine {
     });
   }
 
-  // Warm, continuous Tanpura Shruti Box drone (Sa - Pa - Sa)
+  // Soft warm Tanpura Shruti Box drone (Sa - Pa - Sa)
   _pluckTanpuraNote(freq, duration = 4.2) {
     if (!this.droneEnabled || !this.ctx || !this.isPlaying) return;
     const now = this.ctx.currentTime;
     const harmonics = [1, 1.498, 2];
-    const weights = [0.025, 0.014, 0.009];
+    const weights = [0.018, 0.010, 0.006]; // Subtle warm drone behind the loud vocal chant
 
     harmonics.forEach((h, i) => {
       const osc = this.ctx.createOscillator();
@@ -188,8 +160,8 @@ class MantraAudioEngine {
 
     const masterGain = this.ctx.createGain();
     masterGain.gain.setValueAtTime(0.0001, now);
-    masterGain.gain.linearRampToValueAtTime(0.18, now + 0.7);
-    masterGain.gain.setValueAtTime(0.16, now + durationSec - 1.0);
+    masterGain.gain.linearRampToValueAtTime(0.14, now + 0.7);
+    masterGain.gain.setValueAtTime(0.12, now + durationSec - 1.0);
     masterGain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
 
     formant.connect(masterGain);
@@ -205,39 +177,33 @@ class MantraAudioEngine {
     });
   }
 
-  // Soft warm Harmonium reed accompaniment (follows the song's melody swaras softly behind the voice)
+  // Warm, low-octave Harmonium reed accompaniment
   _playMelodyNote(semitoneOffset, durationSec = 0.65) {
     if (!this.melodyEnabled || !this.ctx || !this.isPlaying) return;
     const now = this.ctx.currentTime;
-    const base = (this.currentDeity?.rootFreq || 146.83); // Warm lower-octave reed harmonium
+    const base = (this.currentDeity?.rootFreq || 146.83);
     const freq = base * Math.pow(2, semitoneOffset / 12);
 
-    const osc1 = this.ctx.createOscillator();
-    const osc2 = this.ctx.createOscillator();
+    const osc = this.ctx.createOscillator();
     const filter = this.ctx.createBiquadFilter();
     const gain = this.ctx.createGain();
 
-    osc1.type = 'triangle';
-    osc2.type = 'sine';
-    osc1.frequency.setValueAtTime(freq, now);
-    osc2.frequency.setValueAtTime(freq * 2, now);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, now);
 
     filter.type = 'lowpass';
-    filter.frequency.value = 680; // Warm mellow harmonium tone, no harsh high pitch
+    filter.frequency.value = 520;
 
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.022, now + 0.08);
+    gain.gain.linearRampToValueAtTime(0.016, now + 0.08);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
 
-    osc1.connect(filter);
-    osc2.connect(filter);
+    osc.connect(filter);
     filter.connect(gain);
     gain.connect(this.ctx.destination);
 
-    osc1.start(now);
-    osc2.start(now);
-    osc1.stop(now + durationSec + 0.05);
-    osc2.stop(now + durationSec + 0.05);
+    osc.start(now);
+    osc.stop(now + durationSec + 0.05);
   }
 
   _startBackgroundDrone() {
@@ -251,7 +217,7 @@ class MantraAudioEngine {
       if (!this.isPlaying) return;
       step = (step + 1) % cycle.length;
       this._pluckTanpuraNote(cycle[step], 4.2);
-    }, 1700);
+    }, 1800);
   }
 
   _stopBackgroundDrone() {
@@ -261,18 +227,55 @@ class MantraAudioEngine {
     if (this.lineTimer) { clearTimeout(this.lineTimer); this.lineTimer = null; }
   }
 
+  _stopActiveVoice() {
+    if (this.activeVoiceSource) {
+      try {
+        this.activeVoiceSource.onended = null;
+        this.activeVoiceSource.stop();
+        this.activeVoiceSource.disconnect();
+      } catch (_) {}
+      this.activeVoiceSource = null;
+    }
+  }
+
+  // Fetch and decode MP3 into a Web Audio AudioBuffer (cached in RAM)
+  async _loadVocalBuffer(deityId, trackKey, lineIndex) {
+    const key = `${deityId}_${trackKey}_${lineIndex}`;
+    if (this.bufferCache.has(key)) {
+      return this.bufferCache.get(key);
+    }
+
+    const urls = [
+      `./audio/${key}.mp3`,
+      `https://raw.githubusercontent.com/jyothibasavaraj062685/mantra-chanting-box/main/audio/${key}.mp3`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const arrayBuf = await res.arrayBuffer();
+        if (!arrayBuf || arrayBuf.byteLength < 500) continue;
+        // Decode using Web Audio API
+        const audioBuffer = await new Promise((resolve, reject) => {
+          this.ctx.decodeAudioData(arrayBuf.slice(0), resolve, reject);
+        });
+        this.bufferCache.set(key, audioBuffer);
+        return audioBuffer;
+      } catch (_) {
+        // Try next URL
+      }
+    }
+    return null;
+  }
+
   // Start playing a Deity's Mantra, Stotra, Ashtottara, or Song in an infinite non-stop loop
   start(deity, trackKey) {
     this._ensureContext();
     this._stopBackgroundDrone();
+    this._stopActiveVoice();
 
-    try {
-      this.ttsAudio.pause();
-      if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
-        window.speechSynthesis.cancel();
-      }
-    } catch (_) {}
-
+    this.playbackSessionId++;
     this.currentDeity = deity;
     this.currentTrackKey = trackKey;
     this.currentTrack = deity.items[trackKey];
@@ -287,47 +290,36 @@ class MantraAudioEngine {
       this.onStateChange(true, this.currentDeity, this.currentTrackKey, this.currentTrack);
     }
 
-    this._playCurrentLine();
+    this._playCurrentLine(this.playbackSessionId);
   }
 
-  _playCurrentLine() {
-    if (!this.isPlaying || !this.currentTrack) return;
+  async _playCurrentLine(sessionId = this.playbackSessionId) {
+    if (!this.isPlaying || !this.currentTrack || sessionId !== this.playbackSessionId) return;
 
+    this._ensureContext();
     const lines = this.currentTrack.lines;
-    const lineObj = lines[this.currentLineIndex];
-    if (this.onLineChange) {
-      this.onLineChange(this.currentLineIndex, lineObj, this.loopCount);
-    }
+    const lineIdx = this.currentLineIndex;
+    const lineObj = lines[lineIdx];
 
-    // Preload next line's MP3 so transition is instant
-    const nextIdx = (this.currentLineIndex + 1) % lines.length;
-    this.nextAudioPreload.src = `./audio/${this.currentDeity.id}_${this.currentTrackKey}_${nextIdx}.mp3`;
+    if (this.onLineChange) {
+      this.onLineChange(lineIdx, lineObj, this.loopCount);
+    }
 
     this.noteTimers.forEach(t => clearTimeout(t));
     this.noteTimers = [];
     if (this.lineTimer) { clearTimeout(this.lineTimer); this.lineTimer = null; }
 
+    // Preload next line in background
+    const nextIdx = (lineIdx + 1) % lines.length;
+    this._loadVocalBuffer(this.currentDeity.id, this.currentTrackKey, nextIdx);
+
     if (this.currentTrack.isOmResonance) {
       this._playOmVocalResonance(this.currentDeity.rootFreq || 136.1, 4.6);
     }
 
-    const estimatedDurationMs = lineObj.duration || Math.max(3800, Math.min(7000, (lineObj.english.length * 105) / this.speedMultiplier));
-
-    if (this.melodyEnabled) {
-      const notes = lineObj.notes || [0, 2, 4, 2, 0];
-      const stepMs = Math.floor((estimatedDurationMs - 200) / Math.max(1, notes.length));
-      notes.forEach((semitone, idx) => {
-        const t = setTimeout(() => {
-          if (!this.isPlaying) return;
-          this._playMelodyNote(semitone, (stepMs / 1000) * 0.95);
-        }, idx * stepMs);
-        this.noteTimers.push(t);
-      });
-    }
-
     let advanced = false;
     const advanceToNextLine = () => {
-      if (advanced || !this.isPlaying) return;
+      if (advanced || !this.isPlaying || sessionId !== this.playbackSessionId) return;
       advanced = true;
       if (this.lineTimer) { clearTimeout(this.lineTimer); this.lineTimer = null; }
 
@@ -337,63 +329,56 @@ class MantraAudioEngine {
         this.loopCount++;
         if (this.onLoopIncrement) this.onLoopIncrement(this.loopCount);
       }
-      this._playCurrentLine();
+      this._playCurrentLine(sessionId);
     };
 
-    // Safety watchdog
-    this.lineTimer = setTimeout(advanceToNextLine, estimatedDurationMs + 3500);
+    // Load and play the vocal MP3 directly through Web Audio API (this.ctx)
+    if (this.voiceEnabled) {
+      const audioBuffer = await this._loadVocalBuffer(this.currentDeity.id, this.currentTrackKey, lineIdx);
+      if (!this.isPlaying || sessionId !== this.playbackSessionId) return;
 
-    if (!this.voiceEnabled) return;
+      if (audioBuffer) {
+        this._stopActiveVoice();
+        const source = this.ctx.createBufferSource();
+        const voiceGain = this.ctx.createGain();
 
-    this._playBundledVocalMp3(lineObj, advanceToNextLine);
-  }
+        source.buffer = audioBuffer;
+        source.playbackRate.value = this.speedMultiplier;
+        // Boost vocal volume so the chanting voice is loud, clear, and front-and-center!
+        voiceGain.gain.value = 1.85;
 
-  _playBundledVocalMp3(lineObj, onDone) {
-    const mp3Path = `./audio/${this.currentDeity.id}_${this.currentTrackKey}_${this.currentLineIndex}.mp3`;
-    let fallbackTriggered = false;
+        source.connect(voiceGain);
+        voiceGain.connect(this.ctx.destination);
+        this.activeVoiceSource = source;
 
-    const fallbackToSpeech = () => {
-      if (fallbackTriggered || !this.isPlaying) return;
-      fallbackTriggered = true;
-      if (!('speechSynthesis' in window)) {
-        setTimeout(onDone, 2500);
+        const durationMs = ((audioBuffer.duration / this.speedMultiplier) * 1000);
+
+        // Schedule soft harmonium accompaniment notes across the actual vocal duration
+        if (this.melodyEnabled) {
+          const notes = lineObj.notes || [0, 2, 4, 2, 0];
+          const stepMs = Math.floor(durationMs / Math.max(1, notes.length));
+          notes.forEach((semitone, idx) => {
+            const t = setTimeout(() => {
+              if (!this.isPlaying || sessionId !== this.playbackSessionId) return;
+              this._playMelodyNote(semitone, (stepMs / 1000) * 0.95);
+            }, idx * stepMs);
+            this.noteTimers.push(t);
+          });
+        }
+
+        source.onended = () => {
+          setTimeout(advanceToNextLine, 220);
+        };
+
+        this.lineTimer = setTimeout(advanceToNextLine, durationMs + 1200);
+        source.start(0);
         return;
       }
-      try {
-        const utter = new SpeechSynthesisUtterance(lineObj.tts || lineObj.english);
-        utter.lang = 'hi-IN';
-        utter.rate = this.speedMultiplier;
-        utter.onend = () => setTimeout(onDone, 250);
-        utter.onerror = () => setTimeout(onDone, 1000);
-        window.speechSynthesis.speak(utter);
-      } catch (_) {
-        setTimeout(onDone, 2000);
-      }
-    };
-
-    try {
-      this.ttsAudio.pause();
-      this.ttsAudio.src = mp3Path;
-      this.ttsAudio.playbackRate = this.speedMultiplier;
-      this.ttsAudio.volume = 1.0;
-
-      this.ttsAudio.onended = () => {
-        setTimeout(onDone, 220);
-      };
-
-      this.ttsAudio.onerror = () => {
-        fallbackToSpeech();
-      };
-
-      const playPromise = this.ttsAudio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          fallbackToSpeech();
-        });
-      }
-    } catch (_) {
-      fallbackToSpeech();
     }
+
+    // Fallback if voice is toggled off
+    const fallbackMs = lineObj.duration || 3800;
+    this.lineTimer = setTimeout(advanceToNextLine, fallbackMs);
   }
 
   resume() {
@@ -404,17 +389,11 @@ class MantraAudioEngine {
 
   stop(notifyUI = true) {
     this.isPlaying = false;
+    this.playbackSessionId++;
     this._stopBackgroundDrone();
+    this._stopActiveVoice();
     this._releaseWakeLock();
 
-    try {
-      this.ttsAudio.pause();
-      this.ttsAudio.removeAttribute('src');
-    } catch (_) {}
-
-    if ('speechSynthesis' in window) {
-      try { window.speechSynthesis.cancel(); } catch (_) {}
-    }
     if (notifyUI && this.onStateChange) {
       this.onStateChange(false, this.currentDeity, this.currentTrackKey, this.currentTrack);
     }

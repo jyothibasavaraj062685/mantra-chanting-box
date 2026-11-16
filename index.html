@@ -86,15 +86,19 @@
     </div>
   </footer>
 
-  <script src="deities-data.js"></script>
-  <script src="deity-illustrations.js"></script>
-  <script src="audio-engine.js"></script>
-  <script src="app.js"></script>
+  <script src="deities-data.js?v=5"></script>
+  <script src="deity-illustrations.js?v=5"></script>
+  <script src="audio-engine.js?v=5"></script>
+  <script src="app.js?v=5"></script>
   <script>
+    // Clear any stale Service Worker caches so updates take effect immediately
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
       });
+    }
+    if ('caches' in window) {
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
     }
   </script>
 </body>
