@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#3d180a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Divya Mantra Box • Android Phone App</title>
+  <style>
+:root {
+  --bg-deep: #140804;
+  --bg-surface: #251008;
+  --bg-card: #32160b;
+  --gold: #ffd54f;
+  --gold-bright: #ffecb3;
+  --saffron: #ff7043;
+  --text-main: #fff8e7;
+  --text-muted: #e0c3a8;
+  --border-gold: rgba(255, 213, 79, 0.28);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  background: radial-gradient(circle at 50% 0%, #3d180a 0%, #140804 75%);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  padding-bottom: 130px;
+  overflow-x: hidden;
+  user-select: none;
+}
+.phone-shell { max-width: 520px; margin: 0 auto; padding: 14px 14px 30px; }
+.app-header {
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(135deg, rgba(84, 30, 12, 0.92), rgba(45, 16, 6, 0.95));
+  border: 1.5px solid var(--border-gold); border-radius: 20px;
+  padding: 12px 16px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); margin-bottom: 14px;
+}
+.brand-area { display: flex; align-items: center; gap: 11px; }
+.diya-icon {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: radial-gradient(circle, #fff59d 0%, #ff9800 65%, #e65100 100%);
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+  box-shadow: 0 0 16px rgba(255, 183, 3, 0.75);
+  animation: pulseGlow 2.4s infinite ease-in-out;
+}
+@keyframes pulseGlow {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 14px rgba(255, 183, 3, 0.7); }
+  50% { transform: scale(1.06); box-shadow: 0 0 24px rgba(255, 215, 0, 0.95); }
+}
+.brand-text h1 { font-size: 1.15rem; font-weight: 800; color: var(--gold-bright); }
+.brand-text p { font-size: 0.75rem; color: var(--text-muted); }
+.temple-instruments { display: flex; gap: 8px; }
+.inst-btn {
+  background: rgba(255, 213, 79, 0.14); border: 1.5px solid rgba(255, 213, 79, 0.45);
+  color: var(--gold-bright); border-radius: 14px; padding: 7px 11px;
+  font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;
+}
+.inst-btn:active { transform: scale(0.92); background: rgba(255, 213, 79, 0.32); }
+.section-label {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.9px;
+  color: var(--gold); font-weight: 700; margin: 12px 4px 8px;
+}
+.quick-pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+.quick-pills::-webkit-scrollbar { display: none; }
+.quick-pill {
+  flex: 0 0 auto; background: linear-gradient(135deg, #52210e, #331307);
+  border: 1.5px solid rgba(255, 213, 79, 0.35); color: #fff3d1;
+  border-radius: 999px; padding: 8px 14px; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+}
+.quick-pill.active {
+  background: linear-gradient(135deg, #ff8f00, #d84315);
+  border-color: #fff59d; color: #fff; box-shadow: 0 0 15px rgba(255, 160, 0, 0.6);
+}
+.deity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 6px; }
+.deity-card {
+  position: relative; border-radius: 20px; padding: 12px 10px;
+  border: 2px solid rgba(255, 213, 79, 0.32); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  cursor: pointer; overflow: hidden;
+}
+.deity-card.playing { border-color: #fff59d; box-shadow: 0 0 22px rgba(255, 213, 79, 0.75); }
+.deity-card.featured-om { grid-column: span 2; flex-direction: row; text-align: left; padding: 12px 16px; gap: 14px; }
+.deity-card.featured-om .portrait-wrap { width: 92px; height: 92px; margin-bottom: 0; flex-shrink: 0; }
+.deity-card.featured-om .card-content { flex: 1; }
+.playing-indicator {
+  position: absolute; top: 8px; right: 8px; background: rgba(0, 0, 0, 0.65);
+  border: 1px solid var(--gold); color: var(--gold-bright); font-size: 0.68rem;
+  font-weight: 800; padding: 3px 8px; border-radius: 99px; display: none;
+}
+.deity-card.playing .playing-indicator { display: inline-flex; }
+.portrait-wrap {
+  width: 104px; height: 104px; border-radius: 50%; background: rgba(0, 0, 0, 0.28);
+  border: 2px solid rgba(255, 236, 179, 0.55); display: flex; align-items: center;
+  justify-content: center; margin-bottom: 8px; overflow: hidden;
+}
+.deity-svg { width: 100%; height: 100%; }
+.deity-name { font-size: 1.02rem; font-weight: 800; color: #fff; margin-bottom: 2px; }
+.deity-sub { font-size: 0.72rem; color: rgba(255, 248, 231, 0.85); margin-bottom: 9px; }
+.card-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; width: 100%; }
+.card-btn {
+  background: rgba(0, 0, 0, 0.42); border: 1px solid rgba(255, 236, 179, 0.4);
+  color: #fff8e7; font-size: 0.71rem; font-weight: 700; padding: 6px 4px;
+  border-radius: 10px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-btn.active-track { background: var(--gold); color: #2b0f04; border-color: #fff; font-weight: 800; }
+.chant-stage {
+  background: linear-gradient(160deg, #2d1206 0%, #170803 100%);
+  border: 2px solid var(--gold); border-radius: 24px; padding: 16px;
+  margin-bottom: 16px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65); display: none;
+}
+.chant-stage.visible { display: block; }
+.stage-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.stage-portrait { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--gold); flex-shrink: 0; overflow: hidden; }
+.stage-meta { flex: 1; }
+.stage-deity-title { font-size: 1.1rem; font-weight: 800; color: var(--gold-bright); }
+.stage-track-name { font-size: 0.86rem; color: #ffd180; font-weight: 600; }
+.loop-badge {
+  background: rgba(255, 213, 79, 0.16); border: 1px solid var(--gold);
+  color: var(--gold-bright); padding: 5px 10px; border-radius: 12px; font-size: 0.76rem; font-weight: 800;
+}
+.mode-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.mode-tab {
+  flex: 1 1 calc(25% - 6px); min-width: 72px; background: rgba(255, 255, 255, 0.07);
+  border: 1.5px solid rgba(255, 213, 79, 0.3); color: var(--text-muted);
+  padding: 8px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-align: center; cursor: pointer;
+}
+.mode-tab.active { background: linear-gradient(135deg, #ffb300, #f57c00); color: #1f0a02; border-color: #fff8e1; font-weight: 800; }
+.lyrics-box {
+  background: rgba(0, 0, 0, 0.42); border: 1.5px solid rgba(255, 213, 79, 0.28);
+  border-radius: 18px; padding: 14px 12px; margin-bottom: 12px; max-height: 260px; overflow-y: auto;
+}
+.lyric-line { padding: 9px 10px; border-radius: 12px; margin-bottom: 6px; opacity: 0.62; cursor: pointer; }
+.lyric-line.current {
+  opacity: 1; background: linear-gradient(90deg, rgba(255, 193, 7, 0.25), rgba(255, 112, 67, 0.18));
+  border-left: 4px solid var(--gold);
+}
+.lyric-sanskrit { font-size: 1.05rem; font-weight: 700; color: var(--gold-bright); margin-bottom: 3px; }
+.lyric-english { font-size: 1.0rem; font-weight: 800; color: #fff; }
+.meaning-banner {
+  background: rgba(255, 213, 79, 0.1); border-radius: 12px; padding: 9px 12px;
+  font-size: 0.8rem; color: #ffe0b2; line-height: 1.4; margin-bottom: 12px;
+}
+.sound-toggles { display: flex; gap: 6px; flex-wrap: wrap; }
+.toggle-chip {
+  flex: 1; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 213, 79, 0.35);
+  color: var(--text-muted); border-radius: 10px; padding: 7px 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;
+}
+.toggle-chip.on { background: rgba(76, 175, 80, 0.25); border-color: #81c784; color: #e8f5e9; }
+.bottom-player {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: linear-gradient(180deg, rgba(45, 16, 6, 0.97) 0%, rgba(20, 7, 2, 0.99) 100%);
+  border-top: 2px solid var(--gold); box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.75); padding: 10px 14px 14px;
+}
+.bottom-player-inner { max-width: 520px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.now-playing-info { flex: 1; min-width: 0; }
+.np-status { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #81c784; }
+.np-status.stopped { color: var(--text-muted); }
+.np-title { font-size: 0.92rem; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np-lyric-preview { font-size: 0.78rem; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stop-btn {
+  background: linear-gradient(135deg, #e53935, #b71c1c); border: 2px solid #ffcdd2;
+  color: #fff; font-size: 0.86rem; font-weight: 800; padding: 10px 16px; border-radius: 14px; cursor: pointer;
+}
+.play-btn {
+  background: linear-gradient(135deg, #ffb300, #e65100); border: 2px solid #fff59d;
+  color: #1f0900; font-size: 0.86rem; font-weight: 800; padding: 10px 16px; border-radius: 14px; cursor: pointer;
+}
+  </style>
+</head>
+<body>
+  <div class="phone-shell">
+    <header class="app-header">
+      <div class="brand-area">
+        <div class="diya-icon">🪔</div>
+        <div class="brand-text">
+          <h1>Divya Mantra Box</h1>
+          <p>Tap any God Card • Plays Non-Stop ∞</p>
+        </div>
+      </div>
+      <div class="temple-instruments">
+        <button id="bellBtn" class="inst-btn">🔔 Bell</button>
+        <button id="shankhaBtn" class="inst-btn">🐚 Conch</button>
+      </div>
+    </header>
+
+    <section id="chantStage" class="chant-stage">
+      <div class="stage-top">
+        <div id="stagePortrait" class="stage-portrait"></div>
+        <div class="stage-meta">
+          <div id="stageDeityTitle" class="stage-deity-title"></div>
+          <div id="stageTrackName" class="stage-track-name"></div>
+        </div>
+        <div id="loopBadge" class="loop-badge">🔁 Loop #1 (∞)</div>
+      </div>
+      <div id="modeTabs" class="mode-tabs"></div>
+      <div id="lyricsBox" class="lyrics-box"></div>
+      <div id="meaningBanner" class="meaning-banner"></div>
+      <div class="sound-toggles">
+        <button id="toggleVoice" class="toggle-chip on">🗣️ Voice: ON</button>
+        <button id="toggleDrone" class="toggle-chip on">🪕 Tanpura: ON</button>
+        <button id="toggleMelody" class="toggle-chip on">🎹 Melody: ON</button>
+        <button id="toggleSpeed" class="toggle-chip on">🐢 Tempo: Normal</button>
+      </div>
+    </section>
+
+    <div class="section-label">
+      <span>⭐ 10 Famous Chants & Aarti Songs</span>
+      <span style="font-size:0.7rem;color:#e0c3a8;text-transform:none;">Swipe →</span>
+    </div>
+    <div id="quickPills" class="quick-pills"></div>
+
+    <div class="section-label">
+      <span>🙏 Tap God Card (Stotra, Mantra or Song)</span>
+    </div>
+    <main id="deityGrid" class="deity-grid"></main>
+  </div>
+
+  <footer class="bottom-player">
+    <div class="bottom-player-inner">
+      <div class="now-playing-info">
+        <div id="npStatus" class="np-status stopped">⏹️ READY — TAP ANY GOD CARD</div>
+        <div id="npTitle" class="np-title">Select a God Card or Famous Song</div>
+        <div id="npLyricPreview" class="np-lyric-preview">Plays continuously until you tap STOP</div>
+      </div>
+      <div class="player-main-btns">
+        <button id="mainPlayBtn" class="play-btn">▶️ Play Om</button>
+        <button id="mainStopBtn" class="stop-btn" style="display:none;">⏹️ STOP</button>
+      </div>
+    </div>
+  </footer>
+
+  <script src="deities-data.js"></script>
+  <script src="deity-illustrations.js"></script>
+  <script src="audio-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#3d180a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Divya Mantra Box • Kids & Family Chanting App</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="phone-shell">
+    <!-- Temple App Header -->
+    <header class="app-header">
+      <div class="brand-area">
+        <div class="diya-icon" aria-hidden="true">🪔</div>
+        <div class="brand-text">
+          <h1>Divya Mantra Box</h1>
+          <p>Tap any God Card • Plays Non-Stop ∞</p>
+        </div>
+      </div>
+      <div class="temple-instruments">
+        <button id="bellBtn" class="inst-btn" title="Ring Temple Bell">🔔 Bell</button>
+        <button id="shankhaBtn" class="inst-btn" title="Blow Shankha">🐚 Conch</button>
+      </div>
+    </header>
+
+    <!-- Active Singing & Read-Along Stage (Opens when any God Card / Song is clicked) -->
+    <section id="chantStage" class="chant-stage" aria-live="polite">
+      <div class="stage-top">
+        <div id="stagePortrait" class="stage-portrait"></div>
+        <div class="stage-meta">
+          <div id="stageDeityTitle" class="stage-deity-title">Lord Ganapati</div>
+          <div id="stageTrackName" class="stage-track-name">Vakratunda Mahakaya</div>
+        </div>
+        <div id="loopBadge" class="loop-badge">🔁 Loop #1 (∞)</div>
+      </div>
+
+      <!-- Switch between Mantra, 1-Para Stotra, Ashtottara, and Famous Song -->
+      <div id="modeTabs" class="mode-tabs"></div>
+
+      <!-- Synchronized Kid-Friendly Lyrics -->
+      <div id="lyricsBox" class="lyrics-box"></div>
+
+      <!-- Kid-Friendly Meaning -->
+      <div id="meaningBanner" class="meaning-banner"></div>
+
+      <!-- Sound & Tempo Controls -->
+      <div class="sound-toggles">
+        <button id="toggleVoice" class="toggle-chip on">🗣️ Voice: ON</button>
+        <button id="toggleDrone" class="toggle-chip on">🪕 Tanpura: ON</button>
+        <button id="toggleMelody" class="toggle-chip on">🎹 Melody: ON</button>
+        <button id="toggleSpeed" class="toggle-chip on">🐢 Tempo: Normal</button>
+      </div>
+    </section>
+
+    <!-- 1-Tap Famous Songs & Aartis Bar (<= 10 Famous Chants) -->
+    <div class="section-label">
+      <span>⭐ 10 Famous Chants & Aarti Songs</span>
+      <span style="font-size:0.7rem;color:#e0c3a8;text-transform:none;">Swipe →</span>
+    </div>
+    <div id="quickPills" class="quick-pills"></div>
+
+    <!-- Clickable God Picture Cards -->
+    <div class="section-label">
+      <span>🙏 Choose God Card (Stotra, Mantra or Song)</span>
+    </div>
+    <main id="deityGrid" class="deity-grid"></main>
+  </div>
+
+  <!-- Persistent Bottom Non-Stop Player Bar -->
+  <footer class="bottom-player">
+    <div class="bottom-player-inner">
+      <div class="now-playing-info">
+        <div id="npStatus" class="np-status stopped">⏹️ READY — TAP ANY GOD CARD</div>
+        <div id="npTitle" class="np-title">Select a God Card or Famous Song</div>
+        <div id="npLyricPreview" class="np-lyric-preview">Plays continuously in a loop until you tap STOP</div>
+      </div>
+      <div class="player-main-btns">
+        <button id="mainPlayBtn" class="play-btn">▶️ Play Om</button>
+        <button id="mainStopBtn" class="stop-btn" style="display:none;">⏹️ STOP</button>
+      </div>
+    </div>
+  </footer>
+
+  <script src="deities-data.js"></script>
+  <script src="deity-illustrations.js"></script>
+  <script src="audio-engine.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

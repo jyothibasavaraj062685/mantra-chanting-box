@@ -1,0 +1,10 @@
+{
+  "name": "Divya Mantra Chanting Box",
+  "short_name": "Mantra Box",
+  "description": "Kid-friendly non-stop Mantra, 1-Para Stotra, Ashtottara & Aarti Chanting Box for Phone",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#140804",
+  "theme_color": "#3d180a",
+  "orientation": "portrait"
+}
